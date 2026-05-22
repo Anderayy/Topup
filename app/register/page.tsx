@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 export default function RegisterPage() {
+  const BASE_PATH = (process.env.NEXT_PUBLIC_APP_BASE_PATH || '').replace(/\/$/, '')
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
@@ -18,15 +19,22 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
+  const loadUniqueIds = useCallback(async () => {
+    const response = await fetch(`${BASE_PATH}/api/unique-ids`, { cache: 'no-store' })
+    if (!response.ok) return
+    const data = await response.json()
+    setUniqueIds((data.uniqueIds || []).map((item: { unique_id: string }) => item.unique_id))
+  }, [BASE_PATH])
+
   useEffect(() => {
-    async function loadUniqueIds() {
-      const response = await fetch('/api/unique-ids')
-      if (!response.ok) return
-      const data = await response.json()
-      setUniqueIds((data.uniqueIds || []).map((item: { unique_id: string }) => item.unique_id))
-    }
     loadUniqueIds().catch(() => undefined)
-  }, [])
+
+    const handleFocus = () => {
+      loadUniqueIds().catch(() => undefined)
+    }
+    window.addEventListener('focus', handleFocus)
+    return () => window.removeEventListener('focus', handleFocus)
+  }, [loadUniqueIds])
 
   const validate = () => {
     if (!fullName || !email || !phoneNumber || !bankName || !accountNumber || !telegramUsername || !password || !uniqueId) {
@@ -54,7 +62,7 @@ export default function RegisterPage() {
     setLoading(true)
 
     try {
-      const response = await fetch('/api/auth/register', {
+      const response = await fetch(`${BASE_PATH}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -78,7 +86,7 @@ export default function RegisterPage() {
 
       setToast('Registrasi berhasil. Mengarahkan ke login...')
       setTimeout(() => {
-        router.push('/login')
+        router.push(`${BASE_PATH}/login`)
       }, 2000)
     } catch (err) {
       setError('Tidak dapat menghubungi server. Silakan coba lagi.')
@@ -178,7 +186,12 @@ export default function RegisterPage() {
 
           <div>
             <label className="label">Unique ID</label>
-            <select className="input-field" value={uniqueId} onChange={(event) => setUniqueId(event.target.value)}>
+            <select
+              className="input-field"
+              value={uniqueId}
+              onFocus={() => loadUniqueIds().catch(() => undefined)}
+              onChange={(event) => setUniqueId(event.target.value)}
+            >
               <option value="">Pilih Unique ID</option>
               {uniqueIds.map((item) => (
                 <option key={item} value={item}>{item}</option>
@@ -193,7 +206,7 @@ export default function RegisterPage() {
         </form>
 
         <div className="mt-6 text-center text-sm text-slate-500">
-          <p>Sudah punya akun? <a href="/login" className="link-primary">Masuk di sini</a></p>
+          <p>Sudah punya akun? <a href={`${BASE_PATH}/login`} className="link-primary">Masuk di sini</a></p>
         </div>
       </div>
 

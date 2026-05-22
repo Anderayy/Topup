@@ -28,10 +28,26 @@ CREATE TABLE IF NOT EXISTS topup_requests (
   amount DECIMAL(15,2) NOT NULL,
   payment_method ENUM('QRIS','VA') NOT NULL DEFAULT 'QRIS',
   status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+  gateway_ref_id VARCHAR(255) NULL,
+  gateway_transaction_id VARCHAR(255) NULL,
+  gateway_status VARCHAR(50) NULL,
+  qris_string TEXT NULL,
+  gateway_payload JSON NULL,
+  callback_received_at TIMESTAMP NULL,
   notes TEXT,
   submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   reviewed_at TIMESTAMP NULL,
+  UNIQUE KEY uniq_topup_gateway_ref_id (gateway_ref_id),
   CONSTRAINT fk_topup_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS payment_withdrawal_callbacks (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  gateway_ref_id VARCHAR(255) NULL,
+  gateway_status VARCHAR(50) NULL,
+  payload JSON NOT NULL,
+  callback_received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_withdrawal_gateway_ref_id (gateway_ref_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS admins (

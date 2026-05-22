@@ -66,6 +66,17 @@ npm run bootstrap:admin
 - Jangan push dump database production yang berisi data pribadi user.
 - Gunakan managed rate-limit store (Redis/Upstash) untuk deployment multi-instance.
 
+## Hilogate (LIVE)
+
+- Isi env:
+  - `HILOGATE_BASE_URL=https://app.hilogate.com/api`
+  - `HILOGATE_MERCHANT_ID=<merchant_id_live>`
+  - `HILOGATE_SECRET_KEY=<merchant_secret_key_live>`
+  - `HILOGATE_ENVIRONMENT=live`
+- Callback URL yang harus diset di dashboard Hilogate:
+  - `https://<domain-kamu>/api/callbacks/hilogate/transaction`
+  - `https://<domain-kamu>/api/callbacks/hilogate/withdrawal`
+
 ## Catatan Unique ID
 
 - Admin menambahkan `unique_id` dari menu **Data User**:

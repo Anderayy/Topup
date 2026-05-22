@@ -3,6 +3,7 @@
 import { useState } from 'react'
 
 export default function LoginPage() {
+  const BASE_PATH = (process.env.NEXT_PUBLIC_APP_BASE_PATH || '').replace(/\/$/, '')
   const [loginId, setLoginId] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -22,7 +23,7 @@ export default function LoginPage() {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 15000)
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch(`${BASE_PATH}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ loginId, password }),
@@ -35,7 +36,7 @@ export default function LoginPage() {
         return
       }
 
-      window.location.assign('/topup')
+      window.location.assign(`${BASE_PATH}/topup`)
     } catch (err: any) {
       if (err?.name === 'AbortError') {
         setError('Request login timeout. Silakan coba lagi.')
@@ -94,7 +95,7 @@ export default function LoginPage() {
         </form>
 
         <div className="mt-6 text-center text-sm text-slate-500">
-          <p>Belum punya akun? <a href="/register" className="link-primary">Daftar sekarang</a></p>
+          <p>Belum punya akun? <a href={`${BASE_PATH}/register`} className="link-primary">Daftar sekarang</a></p>
         </div>
       </div>
     </main>

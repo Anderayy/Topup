@@ -1,4 +1,5 @@
 export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import pool from '../../../../lib/db'
@@ -17,7 +18,10 @@ export async function GET() {
     const [rows] = await pool.execute(
       'SELECT id, unique_id, is_used, created_at FROM unique_ids ORDER BY created_at DESC'
     )
-    return NextResponse.json({ uniqueIds: rows })
+    return NextResponse.json(
+      { uniqueIds: rows },
+      { headers: { 'Cache-Control': 'no-store, max-age=0' } }
+    )
   } catch (error) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
   }

@@ -10,31 +10,65 @@ interface UserData {
 }
 
 export default function TopupPage() {
+  const BASE_PATH = (process.env.NEXT_PUBLIC_APP_BASE_PATH || '').replace(/\/$/, '')
   const MAX_TOPUP_AMOUNT = 9999999999999
   const [user, setUser] = useState<UserData | null>(null)
   const [paymentMethod, setPaymentMethod] = useState('QRIS')
   const [amount, setAmount] = useState('')
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
+  const [qrisRefId, setQrisRefId] = useState('')
+  const [qrisString, setQrisString] = useState('')
+  const [paymentStatus, setPaymentStatus] = useState('')
+  const [hasShownSuccess, setHasShownSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
     async function fetchProfile() {
-      const response = await fetch('/api/auth/me')
+      const response = await fetch(`${BASE_PATH}/api/auth/me`)
       if (!response.ok) {
-        router.push('/login')
+        router.push(`${BASE_PATH}/login`)
         return
       }
       const data = await response.json()
       setUser(data.user)
     }
-    fetchProfile().catch(() => router.push('/login'))
-  }, [router])
+    fetchProfile().catch(() => router.push(`${BASE_PATH}/login`))
+  }, [router, BASE_PATH])
+
+  useEffect(() => {
+    if (!qrisRefId || hasShownSuccess) return
+
+    let isMounted = true
+    const interval = setInterval(async () => {
+      try {
+        const response = await fetch(`${BASE_PATH}/api/topup/status?ref_id=${encodeURIComponent(qrisRefId)}`, { cache: 'no-store' })
+        if (!response.ok) return
+        const data = await response.json()
+        const latestStatus = String(data?.data?.gateway_status || 'PENDING').toUpperCase()
+        if (!isMounted) return
+        setPaymentStatus(latestStatus)
+
+        if (latestStatus === 'SUCCESS' && !hasShownSuccess) {
+          setToast('Pembayaran berhasil diterima.')
+          setHasShownSuccess(true)
+          setTimeout(() => setToast(''), 3500)
+        }
+      } catch {
+        // Ignore intermittent polling errors.
+      }
+    }, 5000)
+
+    return () => {
+      isMounted = false
+      clearInterval(interval)
+    }
+  }, [qrisRefId, hasShownSuccess])
 
   const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' })
-    router.push('/login')
+    await fetch(`${BASE_PATH}/api/auth/logout`, { method: 'POST' })
+    router.push(`${BASE_PATH}/login`)
   }
 
   const validate = () => {
@@ -43,8 +77,8 @@ export default function TopupPage() {
       return false
     }
     const value = Number(amount)
-    if (Number.isNaN(value) || value < 10000) {
-      setError('Nominal minimal 10.000.')
+    if (Number.isNaN(value) || value < 5000) {
+      setError('Nominal minimal 5.000.')
       return false
     }
     if (value > MAX_TOPUP_AMOUNT) {
@@ -60,7 +94,7 @@ export default function TopupPage() {
     if (!validate()) return
     setLoading(true)
     try {
-      const response = await fetch('/api/topup/submit', {
+      const response = await fetch(`${BASE_PATH}/api/topup/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount: Number(amount), paymentMethod })
@@ -71,7 +105,11 @@ export default function TopupPage() {
         setLoading(false)
         return
       }
-      setToast('Request top up berhasil dikirim. Admin akan segera memproses.')
+      setQrisRefId(data?.data?.ref_id || '')
+      setQrisString(data?.data?.qr_string || '')
+      setPaymentStatus(String(data?.data?.status || 'PENDING').toUpperCase())
+      setHasShownSuccess(false)
+      setToast('Request top up berhasil dibuat.')
       setAmount('')
       setLoading(false)
     } catch (err) {
@@ -104,8 +142,8 @@ export default function TopupPage() {
             <label className="label">Metode Pembayaran</label>
             <select className="input-field" value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)}>
               <option value="QRIS">QRIS</option>
-              <option value="VA">VA</option>
             </select>
+            <p className="mt-2 text-xs text-slate-500">VA belum aktif. Saat ini menggunakan QRIS sandbox.</p>
           </div>
 
           <div>
@@ -128,6 +166,24 @@ export default function TopupPage() {
             {loading ? 'Mengirim...' : 'Submit Top Up'}
           </button>
         </form>
+
+        {qrisRefId && (
+          <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm">
+            <p className="font-medium text-slate-800">Payment berhasil dibuat</p>
+            <p className="mt-1 text-slate-600">Ref ID: {qrisRefId}</p>
+            {paymentStatus && <p className="mt-1 text-slate-600">Status: {paymentStatus}</p>}
+            {qrisString && (
+              <div className="mt-1">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(qrisString)}`}
+                  alt="QRIS Code"
+                  className="h-[260px] w-[260px] rounded-lg border border-slate-200 bg-white p-2"
+                />
+                <p className="mt-2 text-xs text-slate-500">Scan QR ini dari aplikasi e-wallet / mobile banking.</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {toast && <div className="toast">{toast}</div>}

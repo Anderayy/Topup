@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react'
 
+const BASE_PATH = (process.env.NEXT_PUBLIC_APP_BASE_PATH || '').replace(/\/$/, '')
+
 interface AdminUser {
   id: number
   unique_id: string
@@ -27,7 +29,7 @@ export default function AdminUsersPage() {
 
     async function fetchUsers(showRefreshing = false) {
       if (showRefreshing) setIsRefreshing(true)
-      const usersResponse = await fetch('/api/admin/users')
+      const usersResponse = await fetch(`${BASE_PATH}/api/admin/users`)
       if (!usersResponse.ok) {
         if (isMounted) setError('Gagal memuat data pengguna.')
         if (showRefreshing) setIsRefreshing(false)
@@ -70,13 +72,13 @@ export default function AdminUsersPage() {
         <aside className="w-full max-w-xs rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-xl font-semibold text-heading">Admin Menu</h2>
           <nav className="mt-6 space-y-3 text-sm text-slate-700">
-            <a href="/admin/users" className="block rounded-2xl bg-slate-100 px-4 py-3 font-medium text-slate-900">Data User</a>
-            <a href="/admin/topup" className="block rounded-2xl px-4 py-3 hover:bg-slate-100">Top Up Request</a>
-            <a href="/admin/unique-ids" className="block rounded-2xl px-4 py-3 hover:bg-slate-100">Unique ID</a>
+            <a href={`${BASE_PATH}/admin/users`} className="block rounded-2xl bg-slate-100 px-4 py-3 font-medium text-slate-900">Data User</a>
+            <a href={`${BASE_PATH}/admin/topup`} className="block rounded-2xl px-4 py-3 hover:bg-slate-100">Top Up Request</a>
+            <a href={`${BASE_PATH}/admin/unique-ids`} className="block rounded-2xl px-4 py-3 hover:bg-slate-100">Unique ID</a>
             <button
               onClick={async () => {
-                await fetch('/api/auth/logout', { method: 'POST' })
-                window.location.href = '/admin/login'
+                await fetch(`${BASE_PATH}/api/auth/logout`, { method: 'POST' })
+                window.location.href = `${BASE_PATH}/admin/login`
               }}
               className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-left text-slate-700 hover:bg-slate-100"
             >

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 export default function AdminLoginPage() {
+  const BASE_PATH = (process.env.NEXT_PUBLIC_APP_BASE_PATH || '').replace(/\/$/, '')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -21,7 +22,7 @@ export default function AdminLoginPage() {
 
     setLoading(true)
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch(`${BASE_PATH}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, role: 'admin' })
@@ -34,7 +35,7 @@ export default function AdminLoginPage() {
         return
       }
 
-      router.push('/admin/users')
+      router.push(`${BASE_PATH}/admin/users`)
     } catch (err) {
       setError('Tidak dapat menghubungi server. Silakan coba lagi.')
       setLoading(false)

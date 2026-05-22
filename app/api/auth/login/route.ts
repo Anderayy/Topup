@@ -5,11 +5,20 @@ import { comparePassword, signAdminToken, signUserToken } from '../../../../lib/
 import { checkRateLimit } from '../../../../lib/rate-limit'
 import { getClientIp, normalizeEmail, normalizePhone } from '../../../../lib/security'
 
+function shouldUseSecureCookie(request: Request) {
+  if (process.env.COOKIE_SECURE) {
+    return process.env.COOKIE_SECURE === 'true'
+  }
+  const forwardedProto = request.headers.get('x-forwarded-proto')
+  return forwardedProto === 'https' || new URL(request.url).protocol === 'https:'
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json()
     const { role } = body
     const ip = getClientIp(request)
+    const secureCookie = shouldUseSecureCookie(request)
 
     if (role === 'admin') {
       const email = normalizeEmail(body?.email)
@@ -34,7 +43,7 @@ export async function POST(request: Request) {
       response.cookies.set('admin_token', token, {
         httpOnly: true,
         path: '/',
-        secure: process.env.NODE_ENV === 'production',
+        secure: secureCookie,
         sameSite: 'strict',
         maxAge: 60 * 60 * 24 * 7
       })
@@ -70,7 +79,7 @@ export async function POST(request: Request) {
     response.cookies.set('token', token, {
       httpOnly: true,
       path: '/',
-      secure: process.env.NODE_ENV === 'production',
+      secure: secureCookie,
       sameSite: 'strict',
       maxAge: 60 * 60 * 24 * 7
     })
