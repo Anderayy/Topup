@@ -66,6 +66,35 @@ export default function TopupPage() {
     }
   }, [qrisRefId, hasShownSuccess])
 
+  useEffect(() => {
+    if (!qrisRefId || hasShownSuccess) return
+
+    let isMounted = true
+    const interval = setInterval(async () => {
+      try {
+        const response = await fetch(`/api/topup/status?ref_id=${encodeURIComponent(qrisRefId)}`, { cache: 'no-store' })
+        if (!response.ok) return
+        const data = await response.json()
+        const latestStatus = String(data?.data?.gateway_status || 'PENDING').toUpperCase()
+        if (!isMounted) return
+        setPaymentStatus(latestStatus)
+
+        if (latestStatus === 'SUCCESS' && !hasShownSuccess) {
+          setToast('Pembayaran berhasil diterima.')
+          setHasShownSuccess(true)
+          setTimeout(() => setToast(''), 3500)
+        }
+      } catch {
+        // Ignore intermittent polling errors.
+      }
+    }, 5000)
+
+    return () => {
+      isMounted = false
+      clearInterval(interval)
+    }
+  }, [qrisRefId, hasShownSuccess])
+
   const handleLogout = async () => {
     await fetch(`${BASE_PATH}/api/auth/logout`, { method: 'POST' })
     router.push(`${BASE_PATH}/login`)
