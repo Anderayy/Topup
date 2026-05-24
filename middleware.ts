@@ -4,22 +4,36 @@ import { verifyEdgeJwt } from './lib/auth-edge'
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
-  const appBasePath = (process.env.APP_BASE_PATH || '').replace(/\/$/, '')
-  const withBasePath = (path: string) => `${appBasePath}${path}`
+  const appBasePath = (
+    process.env.NEXT_PUBLIC_APP_BASE_PATH ||
+    process.env.APP_BASE_PATH ||
+    process.env.NEXT_PUBLIC_BASE_PATH ||
+    process.env.BASE_PATH ||
+    '/topup-app'
+  ).replace(/\/$/, '')
+  const normalizedPathname = pathname.startsWith(`${appBasePath}/`)
+    ? pathname.slice(appBasePath.length)
+    : pathname
+  const redirectUrl = (path: string) => {
+    const url = request.nextUrl.clone()
+    url.pathname = pathname.startsWith(`${appBasePath}/`) ? `${appBasePath}${path}` : path
+    url.search = ''
+    return NextResponse.redirect(url)
+  }
 
-  if (pathname.startsWith('/topup')) {
+  if (normalizedPathname.startsWith('/topup')) {
     const token = request.cookies.get('token')?.value
     const isValid = token ? await verifyEdgeJwt(token, process.env.JWT_SECRET || '') : false
     if (!isValid) {
-      return NextResponse.redirect(new URL(withBasePath('/login'), request.url))
+      return redirectUrl('/login')
     }
   }
 
-  if (pathname.startsWith('/admin') && pathname !== '/admin/login') {
+  if (normalizedPathname.startsWith('/admin') && normalizedPathname !== '/admin/login') {
     const token = request.cookies.get('admin_token')?.value
     const isValid = token ? await verifyEdgeJwt(token, process.env.JWT_ADMIN_SECRET || '') : false
     if (!isValid) {
-      return NextResponse.redirect(new URL(withBasePath('/admin/login'), request.url))
+      return redirectUrl('/admin/login')
     }
   }
 
@@ -27,5 +41,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/topup', '/admin/:path*']
+  matcher: ['/topup/:path*', '/admin/:path*', '/topup-app/topup/:path*', '/topup-app/admin/:path*']
 }
