@@ -34,6 +34,7 @@ export default function AdminTopupPage() {
   const [status, setStatus] = useState<Record<number, string>>({})
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
+  const [deletingRequestId, setDeletingRequestId] = useState<number | null>(null)
   const [search, setSearch] = useState('')
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
@@ -102,6 +103,26 @@ export default function AdminTopupPage() {
 
     setToast('Status top up berhasil diperbarui.')
     setRequests((current) => current.map((item) => (item.id === id ? { ...item, status: newStatus as any, notes: newNotes } : item)))
+    setTimeout(() => setToast(''), 2500)
+  }
+
+  const handleDelete = async (item: TopupRequest) => {
+    const ok = window.confirm(`Hapus request top up ${item.unique_id} sebesar ${formatRupiah(item.amount)}?`)
+    if (!ok) return
+
+    setDeletingRequestId(item.id)
+    setError('')
+    const response = await fetch(`${BASE_PATH}/api/admin/topup/${item.id}`, { method: 'DELETE' })
+    const data = await response.json().catch(() => ({}))
+    setDeletingRequestId(null)
+
+    if (!response.ok) {
+      setError(data?.message || 'Gagal menghapus request top up.')
+      return
+    }
+
+    setRequests((current) => current.filter((request) => request.id !== item.id))
+    setToast('Request top up berhasil dihapus.')
     setTimeout(() => setToast(''), 2500)
   }
 
@@ -211,6 +232,13 @@ export default function AdminTopupPage() {
                         className="btn-primary text-sm"
                       >
                         Simpan
+                      </button>
+                      <button
+                        onClick={() => handleDelete(item)}
+                        disabled={deletingRequestId === item.id}
+                        className="w-full rounded-xl border border-red-200 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+                      >
+                        {deletingRequestId === item.id ? 'Menghapus...' : 'Hapus'}
                       </button>
                     </td>
                   </tr>

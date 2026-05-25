@@ -21,6 +21,8 @@ export default function AdminUsersPage() {
   const [users, setUsers] = useState<AdminUser[]>([])
   const [search, setSearch] = useState('')
   const [error, setError] = useState('')
+  const [toast, setToast] = useState('')
+  const [deletingUserId, setDeletingUserId] = useState<number | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
@@ -65,6 +67,26 @@ export default function AdminUsersPage() {
       )
     })
   }, [search, users])
+
+  const handleDelete = async (user: AdminUser) => {
+    const ok = window.confirm(`Hapus user "${user.full_name}" (${user.unique_id})? Semua top up milik user ini juga akan terhapus.`)
+    if (!ok) return
+
+    setDeletingUserId(user.id)
+    setError('')
+    const response = await fetch(`${BASE_PATH}/api/admin/users/${user.id}`, { method: 'DELETE' })
+    const data = await response.json().catch(() => ({}))
+    setDeletingUserId(null)
+
+    if (!response.ok) {
+      setError(data?.message || 'Gagal menghapus user.')
+      return
+    }
+
+    setUsers((current) => current.filter((item) => item.id !== user.id))
+    setToast('User berhasil dihapus.')
+    setTimeout(() => setToast(''), 2500)
+  }
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-10">
@@ -120,6 +142,7 @@ export default function AdminUsersPage() {
                   <th className="py-3 pr-4">Telegram</th>
                   <th className="py-3 pr-4">Status</th>
                   <th className="py-3 pr-4">Tgl Daftar</th>
+                  <th className="py-3 pr-4">Aksi</th>
                 </tr>
               </thead>
               <tbody>
@@ -139,6 +162,15 @@ export default function AdminUsersPage() {
                       </span>
                     </td>
                     <td className="py-4 pr-4">{new Date(user.created_at).toLocaleString('id-ID')}</td>
+                    <td className="py-4 pr-4">
+                      <button
+                        onClick={() => handleDelete(user)}
+                        disabled={deletingUserId === user.id}
+                        className="rounded-xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+                      >
+                        {deletingUserId === user.id ? 'Menghapus...' : 'Hapus'}
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -146,6 +178,8 @@ export default function AdminUsersPage() {
           </div>
         </section>
       </div>
+
+      {toast && <div className="toast">{toast}</div>}
     </main>
   )
 }
